@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>不定詞・動名詞 Quest</title>
+<style>
+:root{--navy:#18243b;--blue:#4263eb;--sky:#edf2ff;--green:#16845b;--red:#d9485f;--gold:#f0a52b;--ink:#20283a;--muted:#68738a;--paper:#f5f7fc}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:linear-gradient(120deg,#18243b,#344d83);color:white;padding:24px 16px;text-align:center}
+header h1{margin:0;font-size:clamp(24px,4vw,34px)}header p{margin:8px 0 0;color:#dce5ff}
+main{max-width:850px;margin:24px auto;padding:0 14px 40px}
+.panel{background:white;border-radius:18px;padding:22px;box-shadow:0 8px 26px #1c2a4510;margin-bottom:16px}
+h2{font-size:20px;margin:0 0 14px}.sub{color:var(--muted);font-size:14px;line-height:1.65}
+.mode-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.mode{border:2px solid #e1e7f3;background:white;border-radius:14px;padding:16px;text-align:left;cursor:pointer;transition:.15s}
+.mode:hover,.mode.selected{border-color:var(--blue);background:var(--sky)}
+.mode b{display:block;font-size:17px;margin-bottom:6px}.mode span{font-size:13px;color:var(--muted);line-height:1.5}
+.directions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 18px}
+.dir{border:1px solid #cbd4e5;background:white;border-radius:999px;padding:10px 16px;cursor:pointer}
+.dir.selected{background:var(--navy);color:white;border-color:var(--navy)}
+.primary{background:var(--blue);color:white;border:0;border-radius:12px;padding:13px 22px;font-weight:700;font-size:16px;cursor:pointer}
+.primary:disabled{opacity:.4;cursor:not-allowed}.secondary{background:#eef1f8;color:var(--ink);border:0;border-radius:10px;padding:11px 16px;cursor:pointer;font-weight:650}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.hidden{display:none!important}.topline{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;color:var(--muted);font-weight:650}
+.progress{height:9px;background:#edf0f6;border-radius:99px;overflow:hidden;margin:14px 0 22px}.bar{height:100%;width:0;background:var(--blue);transition:width .2s}
+.prompt-label{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.prompt{font-size:clamp(23px,4vw,32px);font-weight:800;line-height:1.4;text-align:center;padding:28px 10px;overflow-wrap:anywhere}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.choice{min-height:62px;border:2px solid #e1e7f0;background:white;border-radius:13px;padding:12px;font-size:16px;font-weight:650;cursor:pointer;text-align:left}
+.choice:hover:not(:disabled){border-color:var(--blue);background:#f6f8ff}.choice:disabled{cursor:default}
+.choice.correct{border-color:var(--green);background:#e8f7f0;color:#116847}.choice.wrong{border-color:var(--red);background:#fff0f2;color:#a72c43}
+.feedback{min-height:30px;margin-top:15px;font-weight:750;text-align:center}.feedback.good{color:var(--green)}.feedback.bad{color:var(--red)}
+.heart{color:var(--red);letter-spacing:4px;font-size:20px}.result{text-align:center}.score{font-size:48px;font-weight:850;color:var(--blue);margin:8px 0}
+.review-item{padding:12px 0;border-bottom:1px solid #edf0f5}.review-item:last-child{border:0}.review-item b{display:block}.review-item small{color:var(--muted)}
+.tag{display:inline-block;background:#eef1f8;color:#4b5870;padding:4px 9px;border-radius:99px;font-size:12px;margin:0 5px 5px 0}
+@media(max-width:560px){.choices{grid-template-columns:1fr}.panel{padding:17px}.choice{min-height:54px}}
+</style>
+</head>
+<body>
+<header><h1>不定詞・動名詞 Quest</h1><p>覚えて、選んで、苦手をなくそう！</p></header>
+<main>
+<section id="setup" class="panel">
+<h2>ゲーム設定</h2>
+<div class="sub">出題方向とゲームモードを選んでスタート！問題はPDF「不定詞・動名詞セット集」をもとにしています。</div>
+<h3>出題方向</h3>
+<div class="directions">
+<button class="dir selected" data-dir="en-ja">英語 → 日本語</button>
+<button class="dir" data-dir="ja-en">日本語 → 英語</button>
+</div>
+<h3>ゲームモード</h3>
+<div class="mode-grid">
+<button class="mode selected" data-mode="time"><b>⏱ タイムアタック</b><span>60秒で何問正解できるか挑戦！</span></button>
+<button class="mode" data-mode="heart"><b>❤️ ハート3つ</b><span>3回間違えるとゲーム終了。</span></button>
+<button class="mode" data-mode="mistake"><b>🔁 間違い克服</b><span>全問に挑戦したあと、間違えた問題だけを繰り返す！</span></button>
+</div>
+<div class="actions"><button id="start" class="primary">ゲームスタート</button></div>
+</section>
+
+<section id="game" class="panel hidden">
+<div class="topline"><span id="modeLabel"></span><span id="status"></span></div>
+<div class="progress"><div id="bar" class="bar"></div></div>
+<div class="prompt-label" id="promptLabel">次の意味を選ぼう</div>
+<div id="prompt" class="prompt"></div>
+<div id="choices" class="choices"></div>
+<div id="feedback" class="feedback"></div>
+<div class="actions" style="justify-content:center"><button id="next" class="primary hidden">次の問題へ</button></div>
+</section>
+
+<section id="result" class="panel hidden">
+<div class="result">
+<h2 id="resultTitle">結果発表！</h2>
+<div id="score" class="score">0 / 0</div>
+<p id="resultText" class="sub"></p>
+<div class="actions" style="justify-content:center">
+<button id="retryWrong" class="primary hidden">間違えた問題を復習する</button>
+<button id="again" class="secondary">設定に戻る</button>
+</div>
+</div>
+<div id="review" class="hidden" style="margin-top:24px">
+<h2>今回の間違い</h2><div id="reviewList"></div>
+</div>
+</section>
+</main>
+<script>
+const DATA = [
+["want 人 to do","人に～してほしい","不定詞の熟語・構文"],
+["allow 人 to do","人が～するのを許す","不定詞の熟語・構文"],
+["ask 人 to do","人に～するのを頼む","不定詞の熟語・構文"],
+["make 人 do","人に～させる（使役・to不要）","不定詞の熟語・構文"],
+["have 人 do","人に～させる（使役・to不要）","不定詞の熟語・構文"],
+["let 人 do","人に～させる（使役・to不要）","不定詞の熟語・構文"],
+["五感（see / hear / feel）人 do","人が～するのを見る・聞く・感じる（to不要）","不定詞の熟語・構文"],
+["疑問詞（when / where / which / what / how）+ to do","（いつ／どこで／どちらを／何を／どのように）～すべきか","不定詞の熟語・構文"],
+["easy / hard / difficult + to do","～することが簡単だ／大変だ／難しい","不定詞の熟語・構文"],
+["happen to do","たまたま～する","不定詞の熟語・構文"],
+["come to do","～するようになる","不定詞の熟語・構文"],
+["fail to do","～できない","不定詞の熟語・構文"],
+["tend to do","～する傾向にある","不定詞の熟語・構文"],
+["manage to do","なんとか～する","不定詞の熟語・構文"],
+["to tell (you) the truth","実のことを言うと","不定詞の熟語・構文"],
+["too + 形容詞 + to do","あまりにも（形容詞）なので～できない","不定詞の熟語・構文"],
+["形容詞 + enough to do","～するには十分（形容詞）である","不定詞の熟語・構文"],
+["so + 形容詞 + as to do","とても（形容詞）なので～する","不定詞の熟語・構文"],
+["in order to do","～するために","不定詞の熟語・構文"],
+["so as to do","～するために","不定詞の熟語・構文"],
+["needless to say","言うまでもなく","不定詞の熟語・構文"],
+["It's no use ~ing","～しても無駄である","動名詞の熟語・構文"],
+["There is no use / point ~ing","～しても無駄である","動名詞の熟語・構文"],
+["There is no ~ing","～することはできない","動名詞の熟語・構文"],
+["be worth ~ing","～する価値がある","動名詞の熟語・構文"],
+["On ~ing","～するとすぐに","動名詞の熟語・構文"],
+["It goes without saying that S V","SがVすることは言うまでもないことだ","動名詞の熟語・構文"],
+["feel like ~ing","～したい気分だ","動名詞の熟語・構文"],
+["look forward to ~ing","～することを楽しみにしている","動名詞の熟語・構文"],
+["be used to ~ing","～することに慣れている","動名詞の熟語・構文"],
+["get used to ~ing","～することに慣れる","動名詞の熟語・構文"],
+["mind ~ing","～するのを気にする","動名詞のみを目的語にする動詞"],
+["escape ~ing","～するのを逃れる","動名詞のみを目的語にする動詞"],
+["give up ~ing","～するのを諦める","動名詞のみを目的語にする動詞"],
+["avoid ~ing","～するのを避ける","動名詞のみを目的語にする動詞"],
+["finish ~ing","～するのを終える","動名詞のみを目的語にする動詞"],
+["enjoy ~ing","～するのを楽しむ","動名詞のみを目的語にする動詞"],
+["put off ~ing","～するのを延期する","動名詞のみを目的語にする動詞"],
+["suggest ~ing","～するのを提案する","動名詞のみを目的語にする動詞"],
+["admit ~ing","～するのを認める","動名詞のみを目的語にする動詞"],
+["consider ~ing","～するのを考える","動名詞のみを目的語にする動詞"],
+["miss ~ing","～するのを損なう","動名詞のみを目的語にする動詞"],
+["practice ~ing","～するのを練習する","動名詞のみを目的語にする動詞"],
+["quit ~ing","～するのをやめる","動名詞のみを目的語にする動詞"],
+["stop ~ing","～するのをやめる","動名詞のみを目的語にする動詞"],
+["decide to do","～するのを決心する","不定詞のみを目的語にする動詞"],
+["agree to do","～するのを同意する","不定詞のみを目的語にする動詞"],
+["attempt to do","～するのを試みる","不定詞のみを目的語にする動詞"],
+["expect to do","～するのを予測する","不定詞のみを目的語にする動詞"],
+["fail to do","～するのを失敗する","不定詞のみを目的語にする動詞"],
+["hope to do","～するのを望む","不定詞のみを目的語にする動詞"],
+["learn to do","～するようになる","不定詞のみを目的語にする動詞"],
+["offer to do","～するのを申し出る","不定詞のみを目的語にする動詞"],
+["plan to do","～するのを計画する","不定詞のみを目的語にする動詞"],
+["pretend to do","～するふりをする","不定詞のみを目的語にする動詞"],
+["promise to do","～するのを約束する","不定詞のみを目的語にする動詞"],
+["refuse to do","～するのを拒む","不定詞のみを目的語にする動詞"],
+["wish to do","～するのをしたいと思う","不定詞のみを目的語にする動詞"],
+["like ~ing / to do","好きである","動名詞・不定詞の両方を使える動詞"],
+["love ~ing / to do","大好きである","動名詞・不定詞の両方を使える動詞"],
+["prefer ~ing / to do","より好む","動名詞・不定詞の両方を使える動詞"],
+["hate ~ing / to do","嫌う","動名詞・不定詞の両方を使える動詞"],
+["start ~ing / to do","始める","動名詞・不定詞の両方を使える動詞"],
+["begin ~ing / to do","始める","動名詞・不定詞の両方を使える動詞"],
+["continue ~ing / to do","続ける","動名詞・不定詞の両方を使える動詞"],
+["remember ~ing","～したのを覚えている","形によって意味が変わる動詞"],
+["remember to do","～することを覚えておく","形によって意味が変わる動詞"],
+["forget ~ing","～したのを忘れる","形によって意味が変わる動詞"],
+["forget to do","～することを忘れる","形によって意味が変わる動詞"],
+["regret ~ing","～したのを公開する","形によって意味が変わる動詞"],
+["regret to do","残念ながら～する","形によって意味が変わる動詞"],
+["try ~ing","試しに～してみる","形によって意味が変わる動詞"],
+["try to do","～しようとする","形によって意味が変わる動詞"],
+["stop ~ing","～するのをやめる","形によって意味が変わる動詞"],
+["stop to do","～するために立ち止まる","形によって意味が変わる動詞"]
+];
+
+const $ = id => document.getElementById(id);
+let direction="en-ja", mode="time", questions=[], index=0, correct=0, wrong=[], current=null, locked=false, hearts=3, seconds=60, timer=null, phase="main", reviewQueue=[];
+document.querySelectorAll("[data-dir]").forEach(b=>b.addEventListener("click",()=>{direction=b.dataset.dir;document.querySelectorAll("[data-dir]").forEach(x=>x.classList.toggle("selected",x===b));}));
+document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",()=>{mode=b.dataset.mode;document.querySelectorAll("[data-mode]").forEach(x=>x.classList.toggle("selected",x===b));}));
+$("start").addEventListener("click",startGame);$("next").addEventListener("click",nextQuestion);$("again").addEventListener("click",()=>{clearInterval(timer);$("result").classList.add("hidden");$("game").classList.add("hidden");$("setup").classList.remove("hidden");});$("retryWrong").addEventListener("click",startWrongReview);
+function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
+function startGame(){
+ clearInterval(timer);questions=shuffle(DATA.map((d,i)=>({id:i,en:d[0],ja:d[1],cat:d[2]})));index=0;correct=0;wrong=[];hearts=3;seconds=60;phase="main";reviewQueue=[];
+ $("setup").classList.add("hidden");$("result").classList.add("hidden");$("game").classList.remove("hidden");
+ $("modeLabel").textContent=mode==="time"?"⏱ タイムアタック":mode==="heart"?"❤️ ハート3つ":"🔁 間違い克服";
+ if(mode==="time"){timer=setInterval(()=>{seconds--;if(seconds<=0){seconds=0;finish("time");}updateStatus();},1000);}
+ showQuestion();
+}
+function updateStatus(){
+ let s=phase==="review"?`間違い復習 ${index+1} / ${questions.length}`:mode==="time"?`残り ${seconds} 秒`:mode==="heart"?`<span class="heart">${"♥".repeat(hearts)}${"♡".repeat(3-hearts)}</span>`:`${phase==="main"?"通常問題":"間違い復習"} ${index+1} / ${questions.length}`;
+ $("status").innerHTML=s;
+}
+function showQuestion(){
+ if(index>=questions.length){if(mode==="mistake"&&phase==="main"&&wrong.length){startWrongReview();return;}finish("complete");return;}
+ locked=false;current=questions[index];$("next").classList.add("hidden");$("feedback").textContent="";$("feedback").className="feedback";
+ $("promptLabel").textContent=direction==="en-ja"?"この英語表現の意味は？":"この日本語にあたる英語表現は？";
+ $("prompt").textContent=direction==="en-ja"?current.en:current.ja;
+ const correctText=direction==="en-ja"?current.ja:current.en;
+ const pool=DATA.map(d=>direction==="en-ja"?d[1]:d[0]).filter(x=>x!==correctText);
+ const options=shuffle([correctText,...shuffle([...new Set(pool)]).slice(0,3)]);
+ $("choices").innerHTML="";
+ options.forEach((opt,i)=>{const btn=document.createElement("button");btn.className="choice";btn.textContent=`${["A","B","C","D"][i]}. ${opt}`;btn.addEventListener("click",()=>answer(btn,opt,correctText));$("choices").appendChild(btn);});
+ $("bar").style.width=`${(index/questions.length)*100}%`;updateStatus();
+}
+function answer(btn,opt,correctText){
+ if(locked)return;locked=true;const buttons=[...$("choices").children];buttons.forEach(b=>b.disabled=true);
+ const ok=opt===correctText;
+ buttons.forEach(b=>{if(b.textContent.slice(3)===correctText)b.classList.add("correct");});
+ if(ok){correct++;$("feedback").textContent="正解！ Great job!";$("feedback").classList.add("good");}
+ else{
+  btn.classList.add("wrong");$("feedback").textContent=`不正解… 正解は「${correctText}」`; $("feedback").classList.add("bad");
+  if(!wrong.some(q=>q.id===current.id))wrong.push(current);
+  if(mode==="heart")hearts--;
+ }
+ updateStatus();
+ if(mode==="heart"&&hearts<=0){$("next").textContent="結果を見る";$("next").classList.remove("hidden");$("next").onclick=()=>finish("hearts");return;}
+ $("next").textContent=index===questions.length-1?"結果を見る":"次の問題へ";$("next").classList.remove("hidden");
+}
+function nextQuestion(){if(!locked)return;index++;showQuestion();}
+function startWrongReview(){
+ clearInterval(timer);phase="review";questions=shuffle([...wrong]);index=0;correct=0;wrong=[];$("result").classList.add("hidden");$("game").classList.remove("hidden");$("modeLabel").textContent="🔁 間違えた問題だけ復習";showQuestion();
+}
+function finish(reason){
+ clearInterval(timer);$("game").classList.add("hidden");$("result").classList.remove("hidden");
+ const total=phase==="review"?questions.length:(mode==="time"?index:mode==="heart"?Math.min(index+1,questions.length):questions.length);
+ $("resultTitle").textContent=reason==="time"?"タイムアップ！":reason==="hearts"?"ゲームオーバー！":phase==="review"?"復習完了！":"結果発表！";
+ $("score").textContent=`${correct} / ${total}`;
+ $("resultText").textContent=phase==="review"?(wrong.length?`まだ ${wrong.length} 問あります。もう一度挑戦しよう！`:"間違えた問題をすべてクリア！"):mode==="time"?`60秒間で ${correct} 問正解！`:mode==="heart"?`正解 ${correct} 問。間違い ${3-hearts} 回で終了！`:`${wrong.length} 問間違えました。`;
+ $("retryWrong").classList.toggle("hidden",wrong.length===0);
+ if(wrong.length){$("review").classList.remove("hidden");$("reviewList").innerHTML=wrong.map(q=>`<div class="review-item"><b>${escapeHtml(q.en)}</b><div>${escapeHtml(q.ja)}</div><small>${escapeHtml(q.cat)}</small></div>`).join("");}
+ else $("review").classList.add("hidden");
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+</script>
+</body></html>
